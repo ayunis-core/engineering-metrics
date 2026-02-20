@@ -19,14 +19,14 @@ jobs:
   # --- Runs on every PR ---
   pr-check:
     if: github.event_name == 'pull_request'
-    uses: ayunis-core/engineering-metrics/.github/workflows/pr-check.yml@main
+    uses: ayunis-core/engineering-metrics/.github/workflows/pr-check.yml@2cae6a22f37f6909dd432b0d10758c76bb7a7bfa # v1.0.0
     with:
       size-threshold: 400
 
   # --- Runs weekly ---
   weekly-report:
     if: github.event_name == 'schedule'
-    uses: ayunis-core/engineering-metrics/.github/workflows/weekly-report.yml@main
+    uses: ayunis-core/engineering-metrics/.github/workflows/weekly-report.yml@2cae6a22f37f6909dd432b0d10758c76bb7a7bfa # v1.0.0
     with:
       days: 7
       # Optional: post report as comment on a tracking issue
