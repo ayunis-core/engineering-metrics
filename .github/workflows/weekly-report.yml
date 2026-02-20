@@ -14,8 +14,8 @@ on:
         type: number
         default: 0
     secrets:
-      SLACK_WEBHOOK_URL:
-        description: "Slack incoming webhook URL for posting the report"
+      SLACK_METRICS_WEBHOOK_URL:
+        description: "Slack incoming webhook URL for posting the metrics report"
         required: false
 
 jobs:
@@ -59,9 +59,9 @@ jobs:
             --body-file /tmp/metrics-report.md
 
       - name: Post to Slack
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        if: ${{ secrets.SLACK_METRICS_WEBHOOK_URL != '' }}
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_METRICS_WEBHOOK_URL }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           chmod +x .metrics/scripts/slack-report.sh

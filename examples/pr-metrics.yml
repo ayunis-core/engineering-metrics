@@ -32,4 +32,4 @@ jobs:
       # Optional: post report as comment on a tracking issue
       # post-to-issue: 42
     secrets:
-      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      SLACK_METRICS_WEBHOOK_URL: ${{ secrets.SLACK_METRICS_WEBHOOK_URL }}
