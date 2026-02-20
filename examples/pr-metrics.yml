@@ -1,0 +1,32 @@
+# Copy this file to .github/workflows/pr-metrics.yml in your repository.
+#
+# It does two things:
+# 1. On every PR: labels by size (S/M/L/XL) and type (feature/fix/refactor/...),
+#    warns if PR exceeds the size threshold.
+# 2. Weekly (Monday 7am UTC): generates a metrics report with PR size, cycle time,
+#    time to first review, deployment frequency, and type distribution.
+
+name: PR Metrics
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  schedule:
+    - cron: "0 7 * * 1" # Monday 7am UTC
+
+jobs:
+  # --- Runs on every PR ---
+  pr-check:
+    if: github.event_name == 'pull_request'
+    uses: ayunis-core/engineering-metrics/.github/workflows/pr-check.yml@main
+    with:
+      size-threshold: 400
+
+  # --- Runs weekly ---
+  weekly-report:
+    if: github.event_name == 'schedule'
+    uses: ayunis-core/engineering-metrics/.github/workflows/weekly-report.yml@main
+    with:
+      days: 7
+      # Optional: post report as comment on a tracking issue
+      # post-to-issue: 42

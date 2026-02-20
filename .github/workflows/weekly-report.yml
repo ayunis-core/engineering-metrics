@@ -1,0 +1,55 @@
+name: Weekly Metrics Report
+
+on:
+  workflow_call:
+    inputs:
+      days:
+        description: "Number of days to look back (default: 7)"
+        required: false
+        type: number
+        default: 7
+      post-to-issue:
+        description: "Post report as comment on a tracking issue (issue number)"
+        required: false
+        type: number
+        default: 0
+
+jobs:
+  weekly-report:
+    name: Generate Weekly Report
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      issues: write
+      actions: read
+    steps:
+      - name: Checkout metrics repo
+        uses: actions/checkout@v4
+        with:
+          repository: ayunis-core/engineering-metrics
+          path: .metrics
+
+      - name: Generate report
+        id: report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          chmod +x .metrics/scripts/weekly-report.sh
+          REPORT=$(.metrics/scripts/weekly-report.sh "${{ inputs.days }}")
+          echo "$REPORT"
+
+          # Save to job summary
+          echo "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+
+          # Save for issue comment step
+          echo "$REPORT" > /tmp/metrics-report.md
+
+      - name: Post to tracking issue
+        if: inputs.post-to-issue > 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment "${{ inputs.post-to-issue }}" \
+            --repo "${{ github.repository }}" \
+            --body-file /tmp/metrics-report.md

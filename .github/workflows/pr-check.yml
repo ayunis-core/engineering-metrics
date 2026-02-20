@@ -1,0 +1,32 @@
+name: PR Check
+
+on:
+  workflow_call:
+    inputs:
+      size-threshold:
+        description: "Max lines before warning (default: 400)"
+        required: false
+        type: number
+        default: 400
+
+jobs:
+  pr-check:
+    name: PR Size & Type
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout metrics repo
+        uses: actions/checkout@v4
+        with:
+          repository: ayunis-core/engineering-metrics
+          path: .metrics
+
+      - name: Run PR check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          chmod +x .metrics/scripts/pr-check.sh
+          .metrics/scripts/pr-check.sh "${{ github.event.pull_request.number }}" "${{ inputs.size-threshold }}"
