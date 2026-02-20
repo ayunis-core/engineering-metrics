@@ -13,6 +13,10 @@ on:
         required: false
         type: number
         default: 0
+    secrets:
+      SLACK_WEBHOOK_URL:
+        description: "Slack incoming webhook URL for posting the report"
+        required: false
 
 jobs:
   weekly-report:
@@ -42,7 +46,7 @@ jobs:
           # Save to job summary
           echo "$REPORT" >> "$GITHUB_STEP_SUMMARY"
 
-          # Save for issue comment step
+          # Save for other steps
           echo "$REPORT" > /tmp/metrics-report.md
 
       - name: Post to tracking issue
@@ -53,3 +57,12 @@ jobs:
           gh issue comment "${{ inputs.post-to-issue }}" \
             --repo "${{ github.repository }}" \
             --body-file /tmp/metrics-report.md
+
+      - name: Post to Slack
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          chmod +x .metrics/scripts/slack-report.sh
+          .metrics/scripts/slack-report.sh /tmp/metrics-report.md

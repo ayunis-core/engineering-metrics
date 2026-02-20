@@ -5,6 +5,7 @@
 #    warns if PR exceeds the size threshold.
 # 2. Weekly (Monday 7am UTC): generates a metrics report with PR size, cycle time,
 #    time to first review, deployment frequency, and type distribution.
+#    Posts to Slack if SLACK_WEBHOOK_URL secret is configured.
 
 name: PR Metrics
 
@@ -30,3 +31,5 @@ jobs:
       days: 7
       # Optional: post report as comment on a tracking issue
       # post-to-issue: 42
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
