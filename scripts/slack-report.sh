@@ -46,8 +46,9 @@ AVG_REVIEW=$(metric_in_section "First Review" "Average")
 MEDIAN_REVIEW=$(metric_in_section "First Review" "Median")
 REVIEWED_COUNT=$(raw_in_section "First Review" "PRs with reviews")
 
-DEPLOY_COUNT=$(echo "$REPORT" | grep "Merges to main" | sed 's/.*\*\*\([0-9]*\)\*\*.*/\1/')
-DEPLOY_RATE=$(echo "$REPORT" | grep "Merges to main" | grep -o '([^)]*day)' || echo "")
+DEPLOY_COUNT=$(echo "$REPORT" | grep "Releases" | sed 's/.*\*\*\([0-9]*\)\*\*.*/\1/')
+MERGE_COUNT=$(echo "$REPORT" | grep "Merges to main" | sed 's/.*| *\([0-9]*\) *|$/\1/' | xargs)
+RELEASE_TAGS=$(echo "$REPORT" | grep "Versions" | sed 's/.*| *\([^|]*\) *|$/\1/' | xargs || echo "")
 
 # Type distribution — extract type and percentage, format for Slack
 TYPES=$(echo "$REPORT" | awk '/Type Distribution/{f=1;next} f&&/^###/{exit} f' | grep '^| [a-z]' | \
@@ -79,7 +80,8 @@ PAYLOAD=$(jq -n \
   --arg median_review "${MEDIAN_REVIEW:-—}" \
   --arg reviewed "${REVIEWED_COUNT:-—}" \
   --arg deploys "${DEPLOY_COUNT:-0}" \
-  --arg deploy_rate "${DEPLOY_RATE:-}" \
+  --arg merges "${MERGE_COUNT:-0}" \
+  --arg releases "${RELEASE_TAGS:-}" \
   --arg types "$TYPES" \
   --arg largest "$LARGEST" \
   --arg repo_url "$REPO_URL" \
@@ -92,7 +94,7 @@ PAYLOAD=$(jq -n \
       {
         type: "context",
         elements: [
-          { type: "mrkdwn", text: ($pr_count + " PRs merged · " + $deploys + " deploys " + $deploy_rate) }
+          { type: "mrkdwn", text: ($pr_count + " PRs merged · " + $deploys + " releases · " + $merges + " merges" + (if $releases != "" then " · " + $releases else "" end)) }
         ]
       },
       { type: "divider" },

@@ -191,24 +191,18 @@ echo ""
 echo "### 4. Deployment Frequency"
 echo ""
 
-# Count merges to main as deployments (most common proxy)
-DEPLOYS=$PR_COUNT
-DEPLOYS_PER_DAY=$(jq -n "$DEPLOYS / $DAYS * 10 | round | . / 10")
+# Count GitHub releases (created by release-please) as actual deployments
+RELEASES=$(gh release list --repo "$REPO" --limit 50 --json tagName,publishedAt 2>/dev/null \
+  | jq --arg since "$SINCE" '[.[] | select(.publishedAt >= $since)]' || echo "[]")
+DEPLOY_COUNT=$(echo "$RELEASES" | jq 'length')
+RELEASE_TAGS=$(echo "$RELEASES" | jq -r '[.[].tagName] | join(", ")')
 
-# Also check for deployment workflow runs
-DEPLOY_RUNS=$(gh run list --repo "$REPO" --workflow deploy --limit 200 --json createdAt,conclusion \
-  --jq "[.[] | select(.createdAt >= \"$SINCE\" and .conclusion == \"success\")] | length" 2>/dev/null || echo "0")
-
-if [ "$DEPLOY_RUNS" -gt 0 ] && [ "$DEPLOY_RUNS" != "0" ]; then
-  DEPLOY_RUNS_PER_DAY=$(jq -n "$DEPLOY_RUNS / $DAYS * 10 | round | . / 10")
-  echo "| Metric | Value |"
-  echo "|--------|-------|"
-  echo "| Merges to main | **$DEPLOYS** ($DEPLOYS_PER_DAY/day) |"
-  echo "| Deploy workflow runs | **$DEPLOY_RUNS** ($DEPLOY_RUNS_PER_DAY/day) |"
-else
-  echo "| Metric | Value |"
-  echo "|--------|-------|"
-  echo "| Merges to main | **$DEPLOYS** ($DEPLOYS_PER_DAY/day) |"
+echo "| Metric | Value |"
+echo "|--------|-------|"
+echo "| Releases | **$DEPLOY_COUNT** |"
+echo "| Merges to main | $PR_COUNT |"
+if [ "$DEPLOY_COUNT" -gt 0 ]; then
+  echo "| Versions | $RELEASE_TAGS |"
 fi
 echo ""
 
