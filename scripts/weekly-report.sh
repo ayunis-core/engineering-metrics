@@ -67,21 +67,13 @@ printf "| XL (>400) | %d | %d%% |\n" "$SIZE_XL" "$((SIZE_XL * 100 / PR_COUNT))"
 echo ""
 
 # ============================================================
-# 2. Cycle Time (PR created → merged)
-# We use createdAt as proxy; for true first-commit time we'd
-# need to query the branch, which is expensive at scale.
+# 2. Cycle Time (first commit → merged)
+# Broken down into coding time and review time.
 # ============================================================
-CYCLE_TIMES=$(echo "$MERGED_PRS" | jq '[.[] | {
-  number: .number,
-  hours: ((((.mergedAt | fromdateiso8601) - (.createdAt | fromdateiso8601)) / 3600) | round)
-}]')
-
-AVG_CYCLE=$(echo "$CYCLE_TIMES" | jq '[.[].hours] | add / length | round')
-MEDIAN_CYCLE=$(echo "$CYCLE_TIMES" | jq '[.[].hours] | sort | if length % 2 == 0 then (.[length/2 - 1] + .[length/2]) / 2 else .[length/2 | floor] end | round')
-P90_CYCLE=$(echo "$CYCLE_TIMES" | jq '[.[].hours] | sort | .[length * 9 / 10 | floor]')
 
 format_hours() {
   local h=$1
+  if [ "$h" -lt 0 ]; then h=0; fi
   if [ "$h" -lt 24 ]; then
     echo "${h}h"
   else
@@ -89,13 +81,63 @@ format_hours() {
   fi
 }
 
-echo "### 2. Cycle Time (PR opened → merged)"
+CYCLE_HOURS=""
+CODING_HOURS=""
+REVIEW_HOURS_CT=""
+CYCLE_COUNT=0
+
+for PR_NUM in $(echo "$MERGED_PRS" | jq -r '.[].number'); do
+  PR_CREATED=$(echo "$MERGED_PRS" | jq -r --argjson n "$PR_NUM" '.[] | select(.number == $n) | .createdAt')
+  PR_MERGED=$(echo "$MERGED_PRS" | jq -r --argjson n "$PR_NUM" '.[] | select(.number == $n) | .mergedAt')
+
+  # Get first commit on the PR
+  FIRST_COMMIT=$(gh api "repos/$REPO/pulls/$PR_NUM/commits" --jq '.[0].commit.committer.date' 2>/dev/null || echo "")
+
+  if [ -n "$FIRST_COMMIT" ] && [ "$FIRST_COMMIT" != "null" ]; then
+    # Full cycle: first commit → merged
+    TOTAL_H=$(jq -n --arg fc "$FIRST_COMMIT" --arg m "$PR_MERGED" \
+      '((($m | fromdateiso8601) - ($fc | fromdateiso8601)) / 3600) | round')
+    # Coding time: first commit → PR opened
+    CODE_H=$(jq -n --arg fc "$FIRST_COMMIT" --arg c "$PR_CREATED" \
+      '((($c | fromdateiso8601) - ($fc | fromdateiso8601)) / 3600) | round')
+    # Review time: PR opened → merged
+    REV_H=$(jq -n --arg c "$PR_CREATED" --arg m "$PR_MERGED" \
+      '((($m | fromdateiso8601) - ($c | fromdateiso8601)) / 3600) | round')
+
+    if [ "$TOTAL_H" -ge 0 ]; then
+      CYCLE_HOURS="$CYCLE_HOURS $TOTAL_H"
+      CODING_HOURS="$CODING_HOURS $CODE_H"
+      REVIEW_HOURS_CT="$REVIEW_HOURS_CT $REV_H"
+      CYCLE_COUNT=$((CYCLE_COUNT + 1))
+    fi
+  fi
+done
+
+calc_stats() {
+  local data="$1"
+  local avg med p90
+  avg=$(echo "$data" | tr ' ' '\n' | awk 'NF{s+=$1;n++} END{if(n>0) print int(s/n); else print 0}')
+  med=$(echo "$data" | tr ' ' '\n' | sort -n | awk 'NF{a[NR]=$1} END{if(NR%2==0) print int((a[NR/2]+a[NR/2+1])/2); else print a[int(NR/2)+1]}')
+  p90=$(echo "$data" | tr ' ' '\n' | sort -n | awk 'NF{a[NR]=$1} END{print a[int(NR*0.9)+1]}')
+  echo "$avg $med $p90"
+}
+
+echo "### 2. Cycle Time (first commit → merged)"
 echo ""
-echo "| Metric | Value |"
-echo "|--------|-------|"
-echo "| Average | **$(format_hours "$AVG_CYCLE")** |"
-echo "| Median | **$(format_hours "$MEDIAN_CYCLE")** |"
-echo "| p90 | $(format_hours "$P90_CYCLE") |"
+
+if [ "$CYCLE_COUNT" -gt 0 ]; then
+  read CYC_AVG CYC_MED CYC_P90 <<< "$(calc_stats "$CYCLE_HOURS")"
+  read CODE_AVG CODE_MED CODE_P90 <<< "$(calc_stats "$CODING_HOURS")"
+  read REVCT_AVG REVCT_MED REVCT_P90 <<< "$(calc_stats "$REVIEW_HOURS_CT")"
+
+  echo "| Phase | Avg | Median | p90 |"
+  echo "|-------|-----|--------|-----|"
+  echo "| Coding (first commit → PR opened) | **$(format_hours "$CODE_AVG")** | $(format_hours "$CODE_MED") | $(format_hours "$CODE_P90") |"
+  echo "| Review (PR opened → merged) | **$(format_hours "$REVCT_AVG")** | $(format_hours "$REVCT_MED") | $(format_hours "$REVCT_P90") |"
+  echo "| **Total cycle** | **$(format_hours "$CYC_AVG")** | $(format_hours "$CYC_MED") | $(format_hours "$CYC_P90") |"
+else
+  echo "No commit data available for this period."
+fi
 echo ""
 
 # ============================================================

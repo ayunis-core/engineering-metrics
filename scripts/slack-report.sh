@@ -36,9 +36,11 @@ SIZE_M=$(echo "$REPORT" | grep "M (51" | grep -o '| [0-9]*%' | grep -o '[0-9]*')
 SIZE_L=$(echo "$REPORT" | grep "L (201" | grep -o '| [0-9]*%' | grep -o '[0-9]*')
 SIZE_XL=$(echo "$REPORT" | grep "XL (>400)" | grep -o '| [0-9]*%' | grep -o '[0-9]*')
 
-AVG_CYCLE=$(metric_in_section "Cycle Time" "Average")
-MEDIAN_CYCLE=$(metric_in_section "Cycle Time" "Median")
-P90_CYCLE=$(raw_in_section "Cycle Time" "p90")
+# Cycle time is now a 3-row table: Coding, Review, Total cycle
+CODING_AVG=$(echo "$REPORT" | awk '/Cycle Time/{f=1;next} f&&/^###/{exit} f' | grep "Coding" | head -1 | sed 's/.*\*\*\([^*]*\)\*\*.*/\1/')
+REVIEW_CT_AVG=$(echo "$REPORT" | awk '/Cycle Time/{f=1;next} f&&/^###/{exit} f' | grep "Review" | head -1 | sed 's/.*\*\*\([^*]*\)\*\*.*/\1/')
+TOTAL_CYCLE_AVG=$(echo "$REPORT" | awk '/Cycle Time/{f=1;next} f&&/^###/{exit} f' | grep "Total cycle" | head -1 | sed 's/.*\*\*\([^*]*\)\*\*.*/\1/')
+TOTAL_CYCLE_MED=$(echo "$REPORT" | awk '/Cycle Time/{f=1;next} f&&/^###/{exit} f' | grep "Total cycle" | head -1 | sed 's/.*\*\* *| *\([^|]*\) *|.*/\1/' | xargs)
 
 AVG_REVIEW=$(metric_in_section "First Review" "Average")
 MEDIAN_REVIEW=$(metric_in_section "First Review" "Median")
@@ -69,9 +71,10 @@ PAYLOAD=$(jq -n \
   --arg size_m "${SIZE_M:-0}" \
   --arg size_l "${SIZE_L:-0}" \
   --arg size_xl "${SIZE_XL:-0}" \
-  --arg avg_cycle "${AVG_CYCLE:-—}" \
-  --arg median_cycle "${MEDIAN_CYCLE:-—}" \
-  --arg p90_cycle "${P90_CYCLE:-—}" \
+  --arg coding_avg "${CODING_AVG:-—}" \
+  --arg review_ct_avg "${REVIEW_CT_AVG:-—}" \
+  --arg total_cycle_avg "${TOTAL_CYCLE_AVG:-—}" \
+  --arg total_cycle_med "${TOTAL_CYCLE_MED:-—}" \
   --arg avg_review "${AVG_REVIEW:-—}" \
   --arg median_review "${MEDIAN_REVIEW:-—}" \
   --arg reviewed "${REVIEWED_COUNT:-—}" \
@@ -97,7 +100,7 @@ PAYLOAD=$(jq -n \
         type: "section",
         fields: [
           { type: "mrkdwn", text: ("*📏 PR Size*\nAvg: " + $avg_size + "\nMedian: " + $median_size + "\n`S` " + $size_s + "% · `M` " + $size_m + "% · `L` " + $size_l + "% · `XL` " + $size_xl + "%") },
-          { type: "mrkdwn", text: ("*⏱️ Cycle Time*\nAvg: " + $avg_cycle + "\nMedian: " + $median_cycle + "\np90: " + $p90_cycle) }
+          { type: "mrkdwn", text: ("*⏱️ Cycle Time*\nCoding: " + $coding_avg + "\nReview: " + $review_ct_avg + "\nTotal: " + $total_cycle_avg + " (med " + $total_cycle_med + ")") }
         ]
       },
       {
