@@ -26,8 +26,13 @@ else
 fi
 
 # Ensure label exists (create with color if missing)
-declare -A LABEL_COLORS=( ["size/S"]="0e8a16" ["size/M"]="fbca04" ["size/L"]="e99695" ["size/XL"]="d93f0b" )
-gh label create "$SIZE_LABEL" --repo "$REPO" --color "${LABEL_COLORS[$SIZE_LABEL]}" --force 2>/dev/null || true
+case "$SIZE_LABEL" in
+  "size/S")  LABEL_COLOR="0e8a16" ;;
+  "size/M")  LABEL_COLOR="fbca04" ;;
+  "size/L")  LABEL_COLOR="e99695" ;;
+  "size/XL") LABEL_COLOR="d93f0b" ;;
+esac
+gh label create "$SIZE_LABEL" --repo "$REPO" --color "$LABEL_COLOR" --force 2>/dev/null || true
 
 # Remove any existing size labels, then apply new one
 for label in "size/S" "size/M" "size/L" "size/XL"; do
