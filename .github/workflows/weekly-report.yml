@@ -59,10 +59,13 @@ jobs:
             --body-file /tmp/metrics-report.md
 
       - name: Post to Slack
-        if: ${{ secrets.SLACK_METRICS_WEBHOOK_URL != '' }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_METRICS_WEBHOOK_URL }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
+          if [ -z "$SLACK_WEBHOOK_URL" ]; then
+            echo "SLACK_METRICS_WEBHOOK_URL not set, skipping Slack notification"
+            exit 0
+          fi
           chmod +x .metrics/scripts/slack-report.sh
           .metrics/scripts/slack-report.sh /tmp/metrics-report.md
