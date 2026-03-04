@@ -15,11 +15,11 @@ BRANCH=$(echo "$PR_DATA" | jq -r '.headRefName')
 TOTAL=$((ADDITIONS + DELETIONS))
 
 # --- Size labeling ---
-if [ "$TOTAL" -le 50 ]; then
+if [ "$TOTAL" -le 200 ]; then
   SIZE_LABEL="size/S"
-elif [ "$TOTAL" -le 200 ]; then
+elif [ "$TOTAL" -le 500 ]; then
   SIZE_LABEL="size/M"
-elif [ "$TOTAL" -le 400 ]; then
+elif [ "$TOTAL" -le 1000 ]; then
   SIZE_LABEL="size/L"
 else
   SIZE_LABEL="size/XL"

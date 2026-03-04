@@ -4,10 +4,10 @@ on:
   workflow_call:
     inputs:
       size-threshold:
-        description: "Max lines before warning (default: 400)"
+        description: "Max lines before warning (default: 1000)"
         required: false
         type: number
-        default: 400
+        default: 1000
 
 jobs:
   pr-check:
