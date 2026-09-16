@@ -18,7 +18,7 @@ jobs:
       issues: write
     steps:
       - name: Checkout metrics repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ayunis-core/engineering-metrics
           path: .metrics
