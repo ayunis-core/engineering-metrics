@@ -40,7 +40,8 @@ for label in "size/S" "size/M" "size/L" "size/XL"; do
     gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label "$label" 2>/dev/null || true
   fi
 done
-gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$SIZE_LABEL"
+# Fork PRs get a read-only token, so label and comment writes must not fail the check.
+gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$SIZE_LABEL" || true
 
 echo "PR #$PR_NUMBER: +$ADDITIONS -$DELETIONS = $TOTAL lines → $SIZE_LABEL"
 
@@ -71,7 +72,7 @@ for t in feature fix refactor chore ci docs other; do
     gh pr edit "$PR_NUMBER" --repo "$REPO" --remove-label "type/$t" 2>/dev/null || true
   fi
 done
-gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$TYPE_LABEL"
+gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$TYPE_LABEL" || true
 
 echo "PR #$PR_NUMBER: type=$TYPE (branch=$BRANCH)"
 
@@ -91,8 +92,7 @@ if [ "$TOTAL" -gt "$SIZE_THRESHOLD" ]; then
 >
 > | Additions | Deletions | Total |
 > |-----------|-----------|-------|
-> | +$ADDITIONS | -$DELETIONS | $TOTAL |"
-    echo "Posted size warning comment"
+> | +$ADDITIONS | -$DELETIONS | $TOTAL |" && echo "Posted size warning comment" || true
   else
     echo "Size warning already posted, skipping"
   fi
